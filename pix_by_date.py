@@ -1,12 +1,14 @@
-import os
 import hashlib
+import os
 from datetime import datetime
+
 from PIL import Image
+
 
 def file_modified_date(filepath: str):
     try:
-        fstat = os.stat(filepath)
-        modified_time = fstat.st_mtime
+        file_info = os.stat(filepath)
+        modified_time = file_info.st_mtime
         dt = datetime.fromtimestamp(modified_time)
         return "{}_{}_{}".format(dt.year, dt.month, dt.day)
     except Exception as e:
@@ -20,32 +22,36 @@ def image_date_taken(filepath: str):
     If the image date taken is not found, then the date modified for 
     the file will be returned. 
     The format of the date will be Year_Month_Day. Example: 2020_9_21
+    Code taken (and modified) from:
+         https://orthallelous.wordpress.com/2015/04/19/extracting-date-and-time-from-images-with-python/
     """
     try:
         std_fmt = '%Y:%m:%d %H:%M:%S.%f'
-        # for subsecond prec, see doi.org/10.3189/2013JoG12J126 , sect. 2.2, 2.3
+
         tags = [(36867, 37521),  # (DateTimeOriginal, SubsecTimeOriginal)
                 (36868, 37522),  # (DateTimeDigitized, SubsecTimeDigitized)
                 (306, 37520), ]  # (DateTime, SubsecTime)
-        exif = Image.open(filepath)._getexif()
-    
+        exif = Image.open(filepath).getexif()
+
         if exif is None:
             return file_modified_date(filepath)
 
+        sub = dat = None
         for t in tags:
             dat = exif.get(t[0])
             sub = exif.get(t[1], 0)
-    
+
             # PIL.PILLOW_VERSION >= 3.0 returns a tuple
             dat = dat[0] if type(dat) == tuple else dat
             sub = sub[0] if type(sub) == tuple else sub
-            if dat != None: break
-    
-        if dat == None: return file_modified_date(filepath)
+            if dat is not None:
+                break
+
+        if dat is None:
+            return file_modified_date(filepath)
         full = '{}.{}'.format(dat, sub)
-        T = datetime.strptime(full, std_fmt)
-        #T = time.mktime(time.strptime(dat, '%Y:%m:%d %H:%M:%S')) + float('0.%s' % sub)
-        return "{}_{}_{}".format(T.year, T.month, T.day)
+        dt = datetime.strptime(full, std_fmt)
+        return "{}_{}_{}".format(dt.year, dt.month, dt.day)
     except Exception as e:
         print(e)
         return file_modified_date(filepath)
@@ -55,31 +61,32 @@ def gather_files(to_files: list, directory: str, ext_list_str: str):
     """
     File 'to_files' with a list of files that were found in 'directory'
     """
-    for root, dirs, files in os.walk(directory):
-        to_files.extend([os.path.join(root, fname) for fname in files if one_of_the_extensions(fname, ext_list_str)])
+    for root, dirs, file_names in os.walk(directory):
+        to_files.extend(
+            [os.path.join(root, the_name) for the_name in file_names if one_of_the_extensions(the_name, ext_list_str)])
 
 
-def files_to_date_taken_map(filepaths: list):
+def files_to_date_taken_map(file_paths: list):
     """
-    For the given list of 'filepaths', returns a dict() that maps the image date 
-    taken (or modified date) string with the a list of filepaths that were taken 
+    For the given list of 'file_paths', returns a dict() that maps the image date
+    taken (or modified date) string with the a list of file_paths that were taken
     on that date.
     """
     dt_taken_map = dict()
     i = 0
-    for filepath in filepaths:
+    for filepath in file_paths:
         dt = image_date_taken(filepath)
         if dt is not None:
-            update_daten_take_list(dt_taken_map, dt, filepath)
+            update_date_taken_list(dt_taken_map, dt, filepath)
         else:
-            update_daten_take_list(dt_taken_map, 'NO_DATE_TAKEN', filepath)
+            update_date_taken_list(dt_taken_map, 'NO_DATE_TAKEN', filepath)
         i = i + 1
         if i % 1001 == 0:
             print("{}/{}".format(len(dt_taken_map), i))
     return dt_taken_map
 
 
-def update_daten_take_list(my_map: dict(), for_this_date: str, filepath: str):
+def update_date_taken_list(my_map: dict, for_this_date: str, filepath: str):
     """
     Updates 'my_map' by adding 'filepath' into 'for_this_date' mapping
     """
@@ -98,25 +105,27 @@ def one_of_the_extensions(filepath: str, ext_list_str: str):
     return False
 
 
-def handle_duplicate_name(date_take_dir: str, new_name: str, old_name: str):
-    bname, ext = os.path.splitext(new_name)
-    fname_hash = hashlib.sha1(bytes(old_name, "utf-8")).hexdigest()
-    return os.path.join(date_taken_dir, "{}{}".format(fname_hash, ext))
+def handle_duplicate_name(dst_dir: str, file_name: str, old_name: str):
+    base_name, ext = os.path.splitext(file_name)
+    file_name_hash = hashlib.sha1(bytes(old_name, "utf-8")).hexdigest()
+    return os.path.join(dst_dir, "{}{}".format(file_name_hash, ext))
 
 
 if __name__ == "__main__":
     import argparse
 
-    prog_description = """
-    Search for pictures (or other files), categorizing them by date taken (or date modified) and moving them to directories matching those dates")
+    description = """
+    Search for pictures (or other files), categorizing them by date 
+    taken (or date modified) and moving them to directories matching 
+    those dates
     """
 
-    parser = argparse.ArgumentParser(description=prog_description)
-    parser.add_argument("--search", default=".")
-    parser.add_argument("--outdir", default="Moved")
-    parser.add_argument("--extensions", default="jpg,mp4,mov,avi,wmv,png")
-    parser.add_argument("--dry-run", action='store_true')
-    parser.add_argument("--verbose", action='store_true')
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("--search", "--src", "-s", default=".")
+    parser.add_argument("--outdir", "--dst", "-o", default="Moved")
+    parser.add_argument("--extensions", "-e", default="jpg,mp4,mov,avi,wmv,png")
+    parser.add_argument("--dry-run", "-d", action='store_true')
+    parser.add_argument("--verbose", "-v", action='store_true')
 
     args = parser.parse_args()
     pictures_dir = args.search
@@ -127,7 +136,7 @@ if __name__ == "__main__":
     all_files = list()
     print("Collecting files in " + pictures_dir)
     gather_files(all_files, pictures_dir, args.extensions)
-    
+
     print("Filter to {} files. Categorizing files by date taken".format(len(all_files)))
     date_taken_map = files_to_date_taken_map(all_files)
 
@@ -159,5 +168,5 @@ if __name__ == "__main__":
                 if os.path.exists(new_name):
                     print("Name {} already exists in {}".format(new_name, date_taken_dir))
                     new_name = handle_duplicate_name(date_taken_dir, new_name, name)
-                    
+
                 print("Will move {} to {}".format(name, new_name))
