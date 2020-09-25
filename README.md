@@ -5,15 +5,15 @@ Handy python utilities
 ```
 usage: pix_by_date.py [-h] [--search SEARCH] [--outdir OUTDIR] [--extensions EXTENSIONS] [--dry-run] [--verbose]
 
-Search for pictures (or other files), categorizing them by date taken (or date modified) and moving them to directories matching those dates")
+Search for pictures (or other files), categorizing them by date taken (or date modified) and moving them to directories matching those dates
 
 optional arguments:
   -h, --help            show this help message and exit
-  --search SEARCH
-  --outdir OUTDIR
-  --extensions EXTENSIONS
-  --dry-run
-  --verbose
+  --search SEARCH, --src SEARCH, -s SEARCH
+  --outdir OUTDIR, --dst OUTDIR, -o OUTDIR
+  --extensions EXTENSIONS, -e EXTENSIONS
+  --dry-run, -d
+  --verbose, -v
 ```
 
 | Option | Default Value | Description and Notes |
