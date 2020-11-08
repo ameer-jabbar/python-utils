@@ -1,5 +1,6 @@
 import hashlib
 import os
+import shutil
 from datetime import datetime
 
 from PIL import Image
@@ -145,7 +146,7 @@ if __name__ == "__main__":
         os.makedirs(args.outdir, exist_ok=True)
 
     if not args.dry_run:
-        print("Moving files to date take directories...")
+        print("Moving files to date taken (or last modified) directories...")
         for date_taken_str, files in date_taken_map.items():
             date_taken_dir = os.path.join(args.outdir, date_taken_str)
             if args.verbose:
@@ -158,7 +159,7 @@ if __name__ == "__main__":
                     new_name = handle_duplicate_name(date_taken_dir, new_name, name)
                 if args.verbose:
                     print("+ mv {} {}".format(name, new_name))
-                os.rename(name, new_name)
+                shutil.move(name, new_name)
     else:
         for date_taken_str, files in date_taken_map.items():
             date_taken_dir = os.path.join(args.outdir, date_taken_str)
