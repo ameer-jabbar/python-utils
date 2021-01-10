@@ -127,6 +127,7 @@ if __name__ == "__main__":
     parser.add_argument("--extensions", "-e", default="jpg,mp4,mov,avi,wmv,png")
     parser.add_argument("--dry-run", "-d", action='store_true')
     parser.add_argument("--verbose", "-v", action='store_true')
+    parser.add_argument("--skip-replace", action='store_true')
 
     args = parser.parse_args()
     pictures_dir = args.search
@@ -156,6 +157,9 @@ if __name__ == "__main__":
                 new_name = os.path.join(date_taken_dir, os.path.basename(name))
                 if os.path.exists(new_name):
                     print("Name {} already exists in {}".format(new_name, date_taken_dir))
+                    if args.skip_replace:
+                        print(" * Skipping replace")
+                        continue
                     new_name = handle_duplicate_name(date_taken_dir, new_name, name)
                 if args.verbose:
                     print("+ mv {} {}".format(name, new_name))
@@ -168,6 +172,9 @@ if __name__ == "__main__":
                 new_name = os.path.join(date_taken_dir, os.path.basename(name))
                 if os.path.exists(new_name):
                     print("Name {} already exists in {}".format(new_name, date_taken_dir))
+                    if args.skip_replace:
+                        print(" * Skipping replace")
+                        continue
                     new_name = handle_duplicate_name(date_taken_dir, new_name, name)
 
                 print("Will move {} to {}".format(name, new_name))
